@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Темп → Секунды</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0d0f12;
+    --surface: #161a1f;
+    --surface2: #1e2329;
+    --border: rgba(255,255,255,0.07);
+    --accent: #c8f04a;
+    --text: #eef0f2;
+    --muted: #6b7280;
+    --mono: 'Space Mono', monospace;
+    --sans: 'DM Sans', sans-serif;
+  }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 3rem 1rem 4rem;
+  }
+  .container { width: 100%; max-width: 560px; }
+
+  header { margin-bottom: 2.5rem; display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+  .header-text {}
+  header .label { font-family: var(--mono); font-size: 11px; letter-spacing: 0.15em; color: var(--accent); text-transform: uppercase; margin-bottom: 0.5rem; }
+  header h1 { font-family: var(--mono); font-size: 26px; font-weight: 700; color: var(--text); }
+  header p { margin-top: 0.6rem; font-size: 14px; color: var(--muted); line-height: 1.6; }
+
+  .help-btn {
+    flex-shrink: 0;
+    margin-top: 4px;
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    border: 1px solid rgba(200,240,74,0.3);
+    background: rgba(200,240,74,0.08);
+    color: var(--accent);
+    font-family: var(--mono);
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s;
+  }
+  .help-btn:hover { background: rgba(200,240,74,0.16); }
+
+  /* overlay */
+  .overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+  }
+  .overlay.open { display: flex; }
+  .help-modal {
+    background: var(--surface);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 14px;
+    padding: 1.75rem;
+    max-width: 500px;
+    width: 100%;
+    max-height: 85vh;
+    overflow-y: auto;
+    position: relative;
+  }
+  .help-modal h2 { font-family: var(--mono); font-size: 16px; font-weight: 700; color: var(--accent); margin-bottom: 1.25rem; }
+  .help-close {
+    position: absolute; top: 1rem; right: 1rem;
+    background: none; border: none; color: var(--muted);
+    font-size: 20px; cursor: pointer; line-height: 1;
+    padding: 4px 8px;
+  }
+  .help-close:hover { color: var(--text); }
+
+  .help-block { margin-bottom: 1.25rem; }
+  .help-block h3 { font-family: var(--mono); font-size: 12px; color: var(--accent); letter-spacing: 0.05em; margin-bottom: 0.5rem; opacity: 0.8; }
+  .help-block p { font-size: 14px; color: var(--muted); line-height: 1.7; }
+  .help-block p + p { margin-top: 0.5rem; }
+
+  .example-box {
+    background: var(--surface2);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-top: 0.6rem;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.8;
+    color: var(--muted);
+  }
+  .example-box .ex-label { color: var(--accent); margin-right: 6px; }
+
+  .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 1rem; }
+  .field label { font-size: 12px; font-family: var(--mono); color: var(--muted); letter-spacing: 0.05em; }
+  .field input {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 16px;
+    font-family: var(--mono);
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s, background 0.15s;
+    width: 100%;
+  }
+  .field input::placeholder { color: var(--muted); font-size: 14px; }
+  .field input:focus { border-color: var(--accent); background: #191d22; }
+  .field .hint { font-size: 11px; color: var(--muted); line-height: 1.5; }
+
+  .pace-section-label { font-size: 12px; font-family: var(--mono); color: var(--muted); letter-spacing: 0.05em; margin-bottom: 8px; }
+  .pace-fields { display: flex; flex-direction: column; gap: 8px; margin-bottom: 6px; }
+  .pace-row { display: flex; align-items: center; gap: 10px; }
+  .pace-tag {
+    font-family: var(--mono); font-size: 12px; color: var(--accent);
+    background: rgba(200,240,74,0.1); border: 1px solid rgba(200,240,74,0.2);
+    border-radius: 6px; padding: 4px 10px; white-space: nowrap;
+    min-width: 72px; text-align: center;
+  }
+  .pace-row input {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 11px 14px; font-size: 15px;
+    font-family: var(--mono); color: var(--text); outline: none;
+    transition: border-color 0.15s; flex: 1;
+  }
+  .pace-row input::placeholder { color: var(--muted); font-size: 13px; }
+  .pace-row input:focus { border-color: var(--accent); }
+  .pace-hint { font-size: 11px; color: var(--muted); line-height: 1.5; margin-bottom: 1rem; }
+
+  .btn {
+    width: 100%; padding: 14px; background: var(--accent); color: #0d0f12;
+    border: none; border-radius: 8px; font-family: var(--mono); font-size: 14px;
+    font-weight: 700; letter-spacing: 0.05em; cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+  }
+  .btn:hover { opacity: 0.9; }
+  .btn:active { transform: scale(0.99); }
+
+  .error {
+    margin-top: 0.75rem; font-size: 13px; color: #f87171;
+    font-family: var(--mono); padding: 10px 14px;
+    background: rgba(248,113,113,0.1); border-radius: 6px;
+    border: 1px solid rgba(248,113,113,0.2); display: none;
+  }
+
+  .results { margin-top: 2rem; display: flex; flex-direction: column; gap: 1.25rem; }
+  .segment-block { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .seg-header { background: var(--surface2); padding: 12px 18px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
+  .seg-name { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--accent); }
+  .seg-meta { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .seg-body { padding: 16px 18px; }
+  .lap-time-row { display: flex; align-items: baseline; gap: 10px; margin-bottom: 4px; }
+  .lap-time-label { font-size: 12px; color: var(--muted); font-family: var(--mono); }
+  .lap-time-value { font-family: var(--mono); font-size: 32px; font-weight: 700; color: var(--text); letter-spacing: -0.02em; }
+  .lap-sub { font-size: 13px; color: var(--muted); margin-bottom: 1rem; font-family: var(--mono); }
+  .splits-title { font-size: 11px; font-family: var(--mono); color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 10px; padding-top: 14px; border-top: 1px solid var(--border); }
+  .splits-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(105px, 1fr)); gap: 8px; }
+  .split-pill { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+  .split-pill .pill-label { font-size: 10px; color: var(--muted); font-family: var(--mono); margin-bottom: 4px; }
+  .split-pill .pill-main { font-size: 18px; font-weight: 700; font-family: var(--mono); color: var(--text); }
+  .split-pill .pill-sub { font-size: 11px; color: var(--muted); font-family: var(--mono); margin-top: 1px; }
+  .split-pill.is-finish { border-color: rgba(200,240,74,0.35); }
+  .split-pill.is-finish .pill-main { color: var(--accent); }
+  .split-pill.is-finish .pill-label { color: var(--accent); opacity: 0.7; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="overlay" id="overlay" onclick="closeHelp(event)">
+    <div class="help-modal">
+      <button class="help-close" onclick="document.getElementById('overlay').classList.remove('open')">✕</button>
+      <h2>// как пользоваться</h2>
+
+      <div class="help-block">
+        <h3>ЗАЧЕМ ЭТО НУЖНО</h3>
+        <p>Вам нужно выполнить интервальную тренировку — например, 6×400 в темпе 4:10 мин/км. Во время интервала смотреть на темп в часах неудобно: он скачет и запаздывает. Удобнее знать ориентир в секундах и просто смотреть на секундомер в конце каждого круга.</p>
+        <p>Проблема: бесплатные стадионы редко бывают ровно 200 м — обычно 210–230 м. Этот калькулятор считает правильное время с учётом реальной длины дорожки.</p>
+      </div>
+
+      <div class="help-block">
+        <h3>ДЛИНА ОТРЕЗКА</h3>
+        <p>Сколько метров нужно пробежать за одно повторение.</p>
+        <p>В расчетах принимается идеальный прямой отрезок дистанции любой необходимой длины (200, 300, 400м и более). Неточность реальной геометрии стадиона не учитывается.</p>
+        <div class="example-box">
+          <span class="ex-label">→</span>200 — один круг<br>
+          <span class="ex-label">→</span>400 — два круга<br>
+          <span class="ex-label">→</span>500 — два круга + 100 м остаток<br>
+          <span class="ex-label">→</span>600 — три круга<br>
+          <span class="ex-label">→</span>200+400 — два отрезка с разным темпом
+        </div>
+        <p style="margin-top:0.6rem">Круги всегда считаются по 200 м. Если остаток есть — он показывается отдельным сплитом.</p>
+      </div>
+
+      <div class="help-block">
+        <h3>ДЛИНА СТАДИОНА</h3>
+        <p>Фактическая длина одного круга на твоей дорожке. Можно ввести точное число или диапазон — тогда получишь вилку ориентиров.</p>
+        <div class="example-box">
+          <span class="ex-label">→</span>210 — точная длина<br>
+          <span class="ex-label">→</span>210-230 — если не знаешь точно
+        </div>
+      </div>
+
+      <div class="help-block">
+        <h3>ТЕМП</h3>
+        <p>Целевой темп в минутах на километр. Можно задать точный или диапазон. При тренировке примера 200+400 появятся два поля — для каждого отрезка своё. Если второе оставить пустым — применится темп первого.</p>
+        <div class="example-box">
+          <span class="ex-label">→</span>4:00 — точный темп<br>
+          <span class="ex-label">→</span>3:50-4:05 — диапазон
+        </div>
+      </div>
+
+      <div class="help-block">
+        <h3>КАК ЧИТАТЬ РЕЗУЛЬТАТ</h3>
+        <p>Большое число — твой ориентир времени на один круг. Карточки ниже — сколько должно быть на секундомере в конце каждого круга нарастающим итогом. Зелёная карточка — финиш отрезка.</p>
+        <div class="example-box">
+          <span class="ex-label">пример:</span>600 м, стадион 210 м, темп 4:00<br>
+          круг → 0:50<br>
+          круг 1 → 0:50 · круг 2 → 1:40 · финиш → 2:30
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <header>
+    <div class="header-text">
+      <div class="label">// pace calc</div>
+      <h1>Темп → Секунды</h1>
+      <p>Переводит нужный темп в ориентиры по кругам для любого стадиона</p>
+    </div>
+    <button class="help-btn" onclick="document.getElementById('overlay').classList.add('open')">?</button>
+  </header>
+
+  <div class="field">
+    <label>ДЛИНА ОТРЕЗКА (м)</label>
+    <input type="text" id="segment" placeholder="200  или  200+400  или  500" oninput="updatePaceFields()" />
+    <div class="hint">Несколько отрезков через +. Круги считаются по 200 м, время — по фактической длине стадиона.</div>
+  </div>
+
+  <div class="field">
+    <label>ДЛИНА СТАДИОНА (м)</label>
+    <input type="text" id="track" placeholder="210  или  210-230" />
+    <div class="hint">Одно число или диапазон через дефис</div>
+  </div>
+
+  <div class="pace-section-label">ТЕМП (мин/км)</div>
+  <div class="pace-fields" id="pace-fields">
+    <div class="pace-row">
+      <div class="pace-tag">отрезок</div>
+      <input type="text" class="pace-input" placeholder="4:00  или  4:00-4:15" />
+    </div>
+  </div>
+  <div class="pace-hint">Диапазон или одно значение. Пустое поле = темп как у первого отрезка.</div>
+
+  <button class="btn" onclick="calculate()">РАССЧИТАТЬ</button>
+  <div class="error" id="error"></div>
+  <div class="results" id="results"></div>
+</div>
+
+<script>
+const LAP_IDEAL = 200;
+
+function parseSegments(str) {
+  return str.split('+').map(s => parseFloat(s.trim())).filter(x => !isNaN(x) && x > 0);
+}
+function updatePaceFields() {
+  const segs = parseSegments(document.getElementById('segment').value);
+  const container = document.getElementById('pace-fields');
+  const existing = Array.from(container.querySelectorAll('input.pace-input')).map(i => i.value);
+  container.innerHTML = '';
+  const count = segs.length || 1;
+  for (let i = 0; i < count; i++) {
+    const row = document.createElement('div');
+    row.className = 'pace-row';
+    const tag = document.createElement('div');
+    tag.className = 'pace-tag';
+    tag.textContent = count === 1 ? 'отрезок' : segs[i] + ' м';
+    const inp = document.createElement('input');
+    inp.type = 'text';
+    inp.className = 'pace-input';
+    inp.placeholder = i === 0 ? '4:00  или  4:00-4:15' : 'пусто = как первый';
+    inp.value = existing[i] || '';
+    row.appendChild(tag);
+    row.appendChild(inp);
+    container.appendChild(row);
+  }
+}
+function parsePace(str) {
+  const m = str.trim().match(/^(\d+):(\d{2})$/);
+  if (!m) return null;
+  return parseInt(m[1]) * 60 + parseInt(m[2]);
+}
+function parsePaceRange(str) {
+  str = (str || '').trim();
+  if (!str) return null;
+  const rng = str.match(/^(\d+:\d{2})\s*[-–]\s*(\d+:\d{2})$/);
+  if (rng) { const a = parsePace(rng[1]), b = parsePace(rng[2]); if (a && b) return [Math.min(a,b), Math.max(a,b)]; }
+  const s = parsePace(str);
+  if (s) return [s, s];
+  return null;
+}
+function parseTrack(str) {
+  str = str.trim();
+  const rng = str.match(/^(\d+)\s*[-–]\s*(\d+)$/);
+  if (rng) return [parseFloat(rng[1]), parseFloat(rng[2])];
+  const s = str.match(/^(\d+(\.\d+)?)$/);
+  if (s) return [parseFloat(s[1]), parseFloat(s[1])];
+  return null;
+}
+function secToMMSS(s) {
+  s = Math.round(s);
+  const m = Math.floor(s / 60), sec = s % 60;
+  return m + ':' + (sec < 10 ? '0' : '') + sec;
+}
+function showError(msg) { const el = document.getElementById('error'); el.textContent = msg; el.style.display = 'block'; }
+function hideError() { document.getElementById('error').style.display = 'none'; }
+function closeHelp(e) { if (e.target === document.getElementById('overlay')) document.getElementById('overlay').classList.remove('open'); }
+
+function calculate() {
+  hideError();
+  document.getElementById('results').innerHTML = '';
+
+  const segRaw = document.getElementById('segment').value.trim();
+  const trackRaw = document.getElementById('track').value.trim();
+  if (!segRaw || !trackRaw) { showError('Заполни длину отрезка и стадиона'); return; }
+
+  const segments = parseSegments(segRaw);
+  if (!segments.length) { showError('Не удалось разобрать длину отрезка'); return; }
+
+  const track = parseTrack(trackRaw);
+  if (!track) { showError('Формат стадиона: 210 или 210-230'); return; }
+
+  const paceInputs = Array.from(document.querySelectorAll('.pace-input'));
+  const paceVals = paceInputs.map(i => i.value.trim());
+  const firstPace = parsePaceRange(paceVals[0]);
+  if (!firstPace) { showError('Введи темп хотя бы для первого отрезка'); return; }
+
+  const paces = paceVals.map(v => { if (!v) return firstPace; return parsePaceRange(v) || null; });
+  if (paces.some(p => !p)) { showError('Проверь формат темпа: М:СС или М:СС-М:СС'); return; }
+
+  const [trackMin, trackMax] = track;
+  const resultsEl = document.getElementById('results');
+
+  segments.forEach((seg, i) => {
+    const [pMin, pMax] = paces[i];
+    const lapTimeFast = pMin * trackMin / 1000;
+    const lapTimeSlow = pMax * trackMax / 1000;
+    const fullLaps = Math.floor(seg / LAP_IDEAL);
+    const remainder = seg % LAP_IDEAL;
+    const remTimeFast = pMin * remainder / 1000;
+    const remTimeSlow = pMax * remainder / 1000;
+
+    const block = document.createElement('div');
+    block.className = 'segment-block';
+
+    const paceLabel = pMin === pMax
+      ? secToMMSS(pMin) + ' мин/км'
+      : secToMMSS(pMin) + '–' + secToMMSS(pMax) + ' мин/км';
+
+    let lapDisplay = Math.round(lapTimeFast) === Math.round(lapTimeSlow)
+      ? `<span class="lap-time-value">${secToMMSS(lapTimeFast)}</span>`
+      : `<span class="lap-time-value">${secToMMSS(lapTimeFast)}<span style="font-size:20px;color:var(--muted);font-weight:400"> – ${secToMMSS(lapTimeSlow)}</span></span>`;
+
+    let structureDesc = '';
+    if (fullLaps > 0 && remainder > 0) {
+      structureDesc = `${fullLaps} кр × 200 м + ${remainder} м`;
+    } else if (fullLaps > 0) {
+      structureDesc = `${fullLaps} кр × 200 м`;
+    } else {
+      structureDesc = `${remainder} м`;
+    }
+
+    const totalItems = fullLaps + (remainder > 0 ? 1 : 0);
+    let splitsHtml = '';
+    if (totalItems > 1 || (fullLaps === 0 && remainder > 0)) {
+      splitsHtml = `<div class="splits-title">сплиты по кругам</div><div class="splits-grid">`;
+      for (let lap = 1; lap <= fullLaps; lap++) {
+        const tFast = lapTimeFast * lap;
+        const tSlow = lapTimeSlow * lap;
+        const isLast = lap === fullLaps && remainder === 0;
+        const sub = Math.round(tFast) !== Math.round(tSlow) ? `<div class="pill-sub">до ${secToMMSS(tSlow)}</div>` : '';
+        splitsHtml += `<div class="split-pill${isLast ? ' is-finish' : ''}">
+          <div class="pill-label">${isLast ? 'финиш' : 'круг ' + lap}</div>
+          <div class="pill-main">${secToMMSS(tFast)}</div>${sub}
+        </div>`;
+      }
+      if (remainder > 0) {
+        const tFast = lapTimeFast * fullLaps + remTimeFast;
+        const tSlow = lapTimeSlow * fullLaps + remTimeSlow;
+        const sub = Math.round(tFast) !== Math.round(tSlow) ? `<div class="pill-sub">до ${secToMMSS(tSlow)}</div>` : '';
+        splitsHtml += `<div class="split-pill is-finish">
+          <div class="pill-label">финиш +${remainder}м</div>
+          <div class="pill-main">${secToMMSS(tFast)}</div>${sub}
+        </div>`;
+      }
+      splitsHtml += `</div>`;
+    }
+
+    block.innerHTML = `
+      <div class="seg-header">
+        <span class="seg-name">${seg} м</span>
+        <span class="seg-meta">темп ${paceLabel}</span>
+      </div>
+      <div class="seg-body">
+        <div class="lap-time-row">
+          <span class="lap-time-label">круг</span>
+          ${lapDisplay}
+        </div>
+        <div class="lap-sub">${structureDesc} · стадион ${trackMin === trackMax ? trackMin : trackMin + '–' + trackMax} м</div>
+        ${splitsHtml}
+      </div>`;
+    resultsEl.appendChild(block);
+  });
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Enter') calculate(); });
+</script>
+</body>
+</html>
